@@ -1,28 +1,42 @@
-const db = [{name: '李雷'}]
+const User = require('../models/users')
 
 class UsersCtl {
-    find(ctx) {
-        ctx.body = db;
+  async find(ctx) {
+    console.log("find");
+    ctx.body = await User.find();
+  }
+
+  async findById(ctx) {
+    const user = await User.findById(ctx.params.id);
+    if (!user) {
+      ctx.throw(404, '用户不存在');
     }
-    findById(ctx) {
-        console.log("id", ctx.params.id)
-        ctx.body = db[ctx.params.id * 1]
-    }
-    create(ctx) {
-        console.log("ctx.request.body", ctx.request.body);
-        db.push(ctx.request.body);
-        ctx.body = ctx.request.body;
-    }
-    update(ctx) {
-        console.log("修改", db[ctx.params.id])
-        db[ctx.params.id] = ctx.request.body;
-        ctx.body = ctx.request.body;
-    }
-    delete(ctx) {
-        console.log("id", ctx.params.id);
-        db.splice(ctx.params.id * 1, 1);
-        ctx.status = 204;
-    }
+    ctx.body = user;
+  }
+
+  async create(ctx) {
+    ctx.verifyParams({
+      name: { type: 'string', required: true }
+    })
+    const user = await new User(ctx.request.body).save();
+    ctx.body = user;
+  }
+
+  async update(ctx) {
+    // 复制这么多次验证信息不合理，应该集中在一个中间件中吧；
+    ctx.verifyParams({
+      name: { type: 'string', required: true }
+    })
+    const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body);
+    if (!user) { ctx.throw(404); }
+    ctx.body = user;
+  }
+
+  async delete(ctx) {
+    const user = await User.findByIdAndRemove(ctx.params.id, ctx.request.body);
+    if (!user) { ctx.throw(404); }
+    ctx.status = 204;
+  }
 }
 
 module.exports = new UsersCtl();
