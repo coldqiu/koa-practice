@@ -1,9 +1,11 @@
 const Koa = require('koa');
-const bodyparser = require('koa-bodyparser')
-const error = require('koa-json-error')
-const parameter = require('koa-parameter')
-const mongoose = require('mongoose')
-const { connectionStr } = require('./config')
+const koaBody = require('koa-body');
+const error = require('koa-json-error');
+const parameter = require('koa-parameter');
+const mongoose = require('mongoose');
+const koaStatic = require('koa-static');
+const path = require('path');
+const { connectionStr } = require('./config');
 
 
 mongoose.connect(connectionStr, { useNewUrlParser: true }, () => console.log("MongoDB 连接成功"));
@@ -23,13 +25,21 @@ const app = new Koa();
 //     }
 //   }
 // })
+app.use(koaStatic(path.join(__dirname, 'public')));
 app.use(error({
   postFormat: (e, {stack, ...rest}) =>
     process.env.NODE_ENV === 'production' ? { ...rest } : { stack, ...rest }
 
 }));
+app.use(koaBody({
+  multipart: true,
+  formidable: {
+    uploadDir: path.join(__dirname, '/public/uploads'),
+    keepExtensions: true, // 保留图片后缀名
+  }
+}));
 
-app.use(bodyparser()); // 需要放在路由之前
+// app.use(koaBody()); // 需要放在路由之前
 app.use(parameter(app));
 
 routing(app);

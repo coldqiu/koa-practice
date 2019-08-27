@@ -1,4 +1,7 @@
-const User = require('../models/users')
+const User = require('../models/users');
+const jsonwebtoken = require('jsonwebtoken');
+const { secret } = require('../config')
+
 
 class UsersCtl {
   async find(ctx) {
@@ -7,7 +10,11 @@ class UsersCtl {
   }
 
   async findById(ctx) {
-    const user = await User.findById(ctx.params.id);
+    const { fields } = ctx.query;
+    console.log("fields", fields);
+    const selectFields = fields.split(';').filter(f => f).map(f => ' +' + f).join('');
+    console.log("selectFields", selectFields);
+    const user = await User.findById(ctx.params.id).select(selectFields);
     if (!user) {
       ctx.throw(404, '用户不存在');
     }
@@ -16,8 +23,12 @@ class UsersCtl {
 
   async create(ctx) {
     ctx.verifyParams({
-      name: { type: 'string', required: true }
-    })
+      name: { type: 'string', required: true },
+      password: { type: 'string', required: true },
+    });
+    const { name } = ctx.request.body;
+    const repeatedUser = await User.findOne({ name });
+    if (repeatedUser) { ctx.throw(409, '用户已经存在')}
     const user = await new User(ctx.request.body).save();
     ctx.body = user;
   }
@@ -25,8 +36,17 @@ class UsersCtl {
   async update(ctx) {
     // 复制这么多次验证信息不合理，应该集中在一个中间件中吧；
     ctx.verifyParams({
-      name: { type: 'string', required: true }
+      name: { type: 'string', required: false },
+      password: { type: 'string', required: false },
+      avatar_url: { type: 'string', required: false },
+      gender: { type: 'string', required: false },
+      headline: { type: 'string', required: false },
+      locations: { type: 'array', itemType: 'string', required: false },
+      business: { type: 'string', required: false },
+      employments: { type: 'array', itemType: 'object', required: false },
+      educations: { type: 'array', itemType: 'object', required: false },
     })
+    console.log("ctx.request.body-update", ctx.request.body);
     const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body);
     if (!user) { ctx.throw(404); }
     ctx.body = user;
@@ -36,6 +56,23 @@ class UsersCtl {
     const user = await User.findByIdAndRemove(ctx.params.id, ctx.request.body);
     if (!user) { ctx.throw(404); }
     ctx.status = 204;
+  }
+  async login(ctx) {
+    console.log("loin",ctx);
+    ctx.verifyParams({
+      name: { type: 'string', required: true },
+      password: { type: 'string', required: true }
+    });
+    const user = await User.findOne(ctx.request.body);
+    if (!user) { ctx.throw(401, '用户名或密码不正确！')}
+    const { _id, name } = user;
+    const token = jsonwebtoken.sign({ _id, name }, secret, {expiresIn: '1d' });
+    ctx.body = { token }
+  }
+
+  async checkOwener(ctx, next) {
+    if (ctx.params.id !== ctx.state.user._id) { ctx.throw(403, '没有权限')}
+    await next();
   }
 }
 
