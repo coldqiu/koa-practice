@@ -5,8 +5,9 @@ const jwt = require('koa-jwt');
 
 
 const { find, findById, create,
-  update, delete: del,
-  login, checkOwener
+  update, delete: del, login,
+  checkOwener, listFollowing, checkUserExist,
+  unFollow, follow, listFollowers
 } = require('../controllers/users');
 
 const { secret } = require('../config');
@@ -40,5 +41,13 @@ router.delete('/:id', auth, checkOwener, del);
 
 router.post('/login', login);
 
+router.get('/:id/following', listFollowing) // 获取用户的关注列表
+
+router.get('/:id/followers', listFollowers) // 获取用户的粉丝列表
+
+
+router.put('/following/:id', auth, checkUserExist, follow); // 关注某个用户
+
+router.put('/unfollow/:id', auth, checkUserExist, unFollow);
 
 module.exports = router;

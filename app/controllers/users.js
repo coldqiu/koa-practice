@@ -5,16 +5,17 @@ const { secret } = require('../config')
 
 class UsersCtl {
   async find(ctx) {
-    console.log("find");
     ctx.body = await User.find();
   }
 
   async findById(ctx) {
     const { fields } = ctx.query;
-    console.log("fields", fields);
-    const selectFields = fields.split(';').filter(f => f).map(f => ' +' + f).join('');
-    console.log("selectFields", selectFields);
-    const user = await User.findById(ctx.params.id).select(selectFields);
+    if (fields) {
+      const selectFields = fields.split(';').filter(f => f).map(f => ' +' + f).join('');
+      const user = await User.findById(ctx.params.id).select(selectFields);
+    }
+    const user = await User.findById(ctx.params.id).select('+following');
+
     if (!user) {
       ctx.throw(404, '用户不存在');
     }
@@ -34,7 +35,6 @@ class UsersCtl {
   }
 
   async update(ctx) {
-    // 复制这么多次验证信息不合理，应该集中在一个中间件中吧；
     ctx.verifyParams({
       name: { type: 'string', required: false },
       password: { type: 'string', required: false },
@@ -57,8 +57,8 @@ class UsersCtl {
     if (!user) { ctx.throw(404); }
     ctx.status = 204;
   }
+
   async login(ctx) {
-    console.log("loin",ctx);
     ctx.verifyParams({
       name: { type: 'string', required: true },
       password: { type: 'string', required: true }
@@ -73,6 +73,50 @@ class UsersCtl {
   async checkOwener(ctx, next) {
     if (ctx.params.id !== ctx.state.user._id) { ctx.throw(403, '没有权限')}
     await next();
+  }
+
+  async listFollowing(ctx) {
+    const user = await User.findById(ctx.params.id).select('+following').populate('following');
+    if (!user) { ctx.throw(404); }
+    ctx.body = user.following;
+  }
+
+  async listFollowers(ctx) {
+    // 获取关注了ctx.params.id 的用户
+    const users = await User.find({ following: ctx.params.id });
+    ctx.body = users;
+  }
+
+  // 检查用户存在与否
+  async checkUserExist(ctx, next) {
+    // mongodb自动生成的id是有规则的
+    if (ctx.params.id.length !== 24) { ctx.throw(404, '用户id错误'); }
+    const user = await User.findById(ctx.params.id);
+    console.log("user", user);
+    if (!user) { ctx.throw(404, '用户不存在') }
+    await next();
+  }
+
+  async follow(ctx) {
+    const me = await User.findById(ctx.state.user._id).select('+following');
+    if (!me.following.map(id => id.toString()).includes(ctx.params.id)) {
+      // 不能拿mongodb 自带的数据类型和 js的数据类型做includes
+      // me.following.includes(ctx.params.id) 错误写法
+      // 使用mongoose 提供的map()方法转换数据类型
+      me.following.push(ctx.params.id);
+      me.save();
+    }
+    ctx.status = 204;
+  }
+
+  async unFollow(ctx) {
+    const me = await User.findById(ctx.state.user._id).select('+following');
+    const index = me.following.map(id => id.toString()).indexOf(ctx.params.id);
+    if (!index > -1) {
+      me.following.splice(index, 1);
+      me.save();
+    }
+    ctx.status = 204;
   }
 }
 
