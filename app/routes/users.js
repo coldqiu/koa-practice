@@ -1,6 +1,5 @@
 const Router = require('koa-router');
 const router = new Router({prefix: '/users'});
-// const jsonwebtoken = require('jsonwebtoken');
 const jwt = require('koa-jwt');
 
 
@@ -15,17 +14,17 @@ const { secret } = require('../config');
 // const auth = async(ctx, next) => {
 //   const { authorization = '' } = ctx.request.header;
 //   console.log("authorization", authorization);
-//   const token = authorization.replace('Bearer ', '');
-//   console.log("secret", secret);
-//   try {
-//     const user = jsonwebtoken.verify(token, secret);
-//     console.log("user", user);
-//     ctx.state.user = user;
-//   } catch (err) {
-//     ctx.throw(401, err.message);
-//   }
-//   await next();
-// }
+// //   const token = authorization.replace('Bearer ', '');
+// //   console.log("secret", secret);
+// //   try {
+// //     const user = jsonwebtoken.verify(token, secret);
+// //     console.log("user", user);
+// //     ctx.state.user = user;
+// //   } catch (err) {
+// //     ctx.throw(401, err.message);
+// //   }
+// //   await next();
+// // }
 
 const auth = jwt({ secret });
 

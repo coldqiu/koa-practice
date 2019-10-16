@@ -9,12 +9,21 @@ class UsersCtl {
   }
 
   async findById(ctx) {
-    const { fields } = ctx.query;
-    if (fields) {
-      const selectFields = fields.split(';').filter(f => f).map(f => ' +' + f).join('');
-      const user = await User.findById(ctx.params.id).select(selectFields);
-    }
-    const user = await User.findById(ctx.params.id).select('+following');
+    const { fields = '' } = ctx.query;
+    console.log("fields", fields);
+    const selectFields = fields.split(';').filter(f => f).map(f => ' +' + f).join('');
+    // const populateStr = fields.split(';').filter(f => f).map(f => {
+    //   if (f === 'employments') {
+    //     return 'employments.company employments.job';
+    //   }
+    //   if (f === 'educations') {
+    //     return 'educations.major educations.school';
+    //   }
+    //    return f;
+    // })                                                                                                                                                                                                                                                                                                                      = fields.split(';').filter();
+    // console.log("selectFields", populateStr);
+    const user = await User.findById(ctx.params.id).select(selectFields).populate('follow locations business employments.company employments.job employments.major');
+    // const user = await User.findById(ctx.params.id).select('+following');
 
     if (!user) {
       ctx.throw(404, '用户不存在');
@@ -45,8 +54,7 @@ class UsersCtl {
       business: { type: 'string', required: false },
       employments: { type: 'array', itemType: 'object', required: false },
       educations: { type: 'array', itemType: 'object', required: false },
-    })
-    console.log("ctx.request.body-update", ctx.request.body);
+    });
     const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body);
     if (!user) { ctx.throw(404); }
     ctx.body = user;
