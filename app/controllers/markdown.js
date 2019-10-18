@@ -9,7 +9,7 @@ class markdownCtl {
     ctx.body = (content ? content : '消息为空')
   }
   async find(ctx) {
-    const content = await Markdown.find()
+    const content = await Markdown.find().sort({_id: -1})
     ctx.body = content
   }
   async delete(ctx) {
