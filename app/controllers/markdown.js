@@ -5,8 +5,11 @@ class markdownCtl {
     const { content } = ctx.request.body
     if (content) {
       await new Markdown(ctx.request.body).save()
+      ctx.status = 200
+    } else {
+      ctx.status = 204
     }
-    ctx.body = (content ? content : '消息为空')
+
   }
   async find(ctx) {
     const content = await Markdown.find().sort({_id: -1})
